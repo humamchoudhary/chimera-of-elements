@@ -1,0 +1,33 @@
+from entites.base_entity import Entity
+import pygame
+
+
+class Player(Entity):
+    def __init__(self, x, y):
+        super().__init__(x, y, 30, 50, (0, 0, 255))
+
+    def handle_input(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_a]:
+            self.velocity.x -= self.acceleration
+            self.direction = -1
+        if keys[pygame.K_d]:
+            self.velocity.x += self.acceleration
+            self.direction = 1
+        if keys[pygame.K_w] and self.on_ground:
+            self.velocity.y = self.jump_strength
+            self.on_ground = False
+        if keys[pygame.K_LSHIFT]:
+            self.dash()
+
+        self.velocity.x = max(-self.max_speed,
+                              min(self.velocity.x, self.max_speed))
+
+    def update(self, platforms):
+
+        super().update()
+        print(self)
+        self.handle_input()
+        self.move()
+        self.apply_friction()
+        self.check_collision(platforms)
