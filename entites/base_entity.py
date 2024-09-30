@@ -4,20 +4,22 @@ import pygame
 class Entity:
     def __init__(self, x, y, width, height, color):
         self.rect = pygame.Rect(x, y, width, height)
+        self.x, self.y = x, y
         self.color = color
         self.velocity = pygame.math.Vector2(0, 0)
-        self.max_speed = 5
-        self.acceleration = 1
-        self.friction = 0.5
+        self.max_speed = 8
+        self.acceleration = 1.2
+        self.friction = 0.3
         self.gravity = 0.8
         self.jump_strength = -15
         self.on_ground = False
         self.dash_speed = 30
-        self.dash_cooldown = 8
+        self.dash_cooldown = 2
         self.dash_timer = 0
         self.direction = 1
         self.can_dash = True
         self.dash_duration = 0.3
+        self.collision_tol = 2
 
     def move(self):
         if self.velocity.x > 0:
@@ -25,7 +27,7 @@ class Entity:
         elif self.velocity.x < 0:
             self.direction = -1
         self.velocity.y += self.gravity
-        self.velocity.y = min(self.velocity.y, 10)  # Terminal velocity
+        self.velocity.y = min(self.velocity.y, 40)  # Terminal velocity
 
         self.rect.x += int(self.velocity.x)
         self.rect.y += int(self.velocity.y)
@@ -54,23 +56,43 @@ class Entity:
 
     def check_collision(self, objs):
         for obj in objs:
+            if not obj:
+                continue
+            if not isinstance(obj, pygame.Rect):
+                obj = obj.rect
             if self.rect.colliderect(obj):
-                if self.velocity.y > 0 and self.rect.bottom > obj.top and self.rect.top < obj.top:
+                # Calculate overlap on each side
+                left_overlap = self.rect.right - obj.left
+                right_overlap = obj.right - self.rect.left
+                top_overlap = self.rect.bottom - obj.top
+                bottom_overlap = obj.bottom - self.rect.top
+
+                # Determine the side with the smallest overlap
+                min_overlap = min(left_overlap, right_overlap,
+                                  top_overlap, bottom_overlap)
+
+                if min_overlap == bottom_overlap and self.velocity.y < 0:
+                    # Top collision
+                    self.rect.top = obj.bottom
+                    self.velocity.y = 0
+                    self.on_ground = False
+                elif min_overlap == top_overlap and self.velocity.y > 0:
+                    # Bottom collision
                     self.rect.bottom = obj.top
                     self.velocity.y = 0
                     self.on_ground = True
-                elif self.velocity.y < 0 and self.rect.top < obj.bottom and self.rect.bottom > obj.bottom:
-                    self.rect.top = obj.bottom
-                    self.velocity.y = 0
-                elif self.velocity.x > 0 and self.rect.right > obj.left and self.rect.left < obj.left:
-                    self.rect.right = obj.left
-                    self.velocity.x = 0
-                elif self.velocity.x < 0 and self.rect.left < obj.right and self.rect.right > obj.right:
+                elif min_overlap == right_overlap and self.velocity.x < 0:
+                    # Left collision
                     self.rect.left = obj.right
                     self.velocity.x = 0
+                elif min_overlap == left_overlap and self.velocity.x > 0:
+                    # Right collision
+                    self.rect.right = obj.left
+                    self.velocity.x = 0
 
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect)
+    def draw(self, screen, camera):
+        zoomed_rect = camera.apply(self.rect)
+        pygame.draw.rect(screen, self.color, zoomed_rect)
 
     def __str__(self):
         ret = ""

@@ -3,8 +3,8 @@ import pygame
 
 
 class Player(Entity):
-    def __init__(self, x, y):
-        super().__init__(x, y, 30, 50, (0, 0, 255))
+    def __init__(self, x, y, size):
+        super().__init__(x, y-size-20, size, size*2, (0, 0, 255))
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
@@ -20,7 +20,7 @@ class Player(Entity):
 
     def update(self, platforms):
         super().update()
-        # print(self)
+        print(self.rect)
         self.handle_input()
         self.move()
         self.apply_friction()
